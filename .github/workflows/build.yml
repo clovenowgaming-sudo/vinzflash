@@ -1,0 +1,42 @@
+name: build-windows-exe
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Go 1.20 = versi terakhir yang support Windows 7/8
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.20.14"
+
+      - name: Build vinzflash.exe (Windows x86_64, Win7 compatible)
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: "0"
+        run: go build -trimpath -ldflags "-s -w" -o vinzflash.exe .
+
+      # platform-tools r33.0.3 = versi lama yang aman untuk Windows 7
+      - name: Download platform-tools (adb + fastboot)
+        run: |
+          curl -L -o pt.zip https://dl.google.com/android/repository/platform-tools_r33.0.3-windows.zip
+          unzip -q pt.zip
+          mkdir -p bundle
+          cp vinzflash.exe bundle/
+          cp platform-tools/adb.exe platform-tools/fastboot.exe platform-tools/AdbWinApi.dll platform-tools/AdbWinUsbApi.dll bundle/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vinzflash-exe-only
+          path: vinzflash.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vinzflash-win7-bundle
+          path: bundle/
